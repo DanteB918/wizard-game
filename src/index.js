@@ -1,123 +1,319 @@
 import 'phaser';
 
-
-
-
+/*
+*   GAME CONTROLS:
+*   left & right arrows to move
+*   space bar to jump
+*   Enter key will mute the music in game.
+*   Z & X are the attack moves,  Z being light, X being heavy.
+*
+*/
 class Scene1 extends Phaser.Scene {
-    constructor(){
-        super("bootGame");
-    }
-
-    preload(){
-        this.load.image('bg1', 'assets/backgrounds/game_background_1.png' );
-        this.load.spritesheet('wraith1-idle', 'assets/wraith1-idle.png', {
-            frameWidth: 520,
-            frameHeight: 420
-        });
-    }
-    create(){
-    this.bg1 = this.add.image(0,0, 'bg1').setOrigin(0, 0);
-    this.bg1.displayWidth = this.sys.canvas.width;
-    this.bg1.displayHeight = this.sys.canvas.height;
-
-
-    this.wraith1 = this.physics.add.sprite(config.width / 2, config.height / 2, 'sprite')
-    this.anims.create({
-        key: 'wraith1_idle',
-        frames: this.anims.generateFrameNumbers('wraith1-idle'),
-        frameRate: 15,
-        repeat: -1
-    });
-    this.wraith1.play('wraith1_idle');
-    var startText = this.add.text(config.width / 2 - 150, config.height / 2 + 200, "Press Enter to start", { fontSize: '25px' });
-    
-    //Register Enter binding
-    this.enter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-    }
-    update() {
-        //Move when hitting Enter
-        if (Phaser.Input.Keyboard.JustDown(this.enter)){
-            this.wraith1.setVelocityX(160); //Make Sprite walk before starting game.
-            setTimeout(() => {
-                this.scene.start("playGame"); //Start game
-            }, 3000);
-        }
-    }
-}
-
-class Scene2 extends Phaser.Scene {
     constructor(){
         super("playGame");
     }
 
     preload(){
-        this.load.spritesheet('wraith1-attack', 'assets/wraith1-attack.png', {
-            frameWidth: 520,
-            frameHeight: 420
+        //Load in font
+        function loadFont(name, url) {
+            var newFont = new FontFace(name, `url(${url})`);
+            newFont.load().then(function (loaded) {
+                document.fonts.add(loaded);
+            }).catch(function (error) {
+                return error;
+            });
+        }
+        loadFont("Press Start 2P", "assets/fonts/PressStart2P-Regular.ttf");
+
+        //Load in Audio
+        this.load.audio("theme-song", ["assets/audio/devil-tower-1.mp3"]);
+        //Load in Images
+        this.load.image('bg1', 'assets/backgrounds/game_background_1.png' );
+        this.load.image('spike', 'assets/tile-sheet/spikes.png');
+
+        //Load in Sprites. 
+
+        /*
+        *   Main char sprite + animations
+        */
+        this.load.spritesheet('wiz-idle', 'assets/Idle.png', {
+            frameWidth: 250,
+            frameHeight: 250
         });
-        this.load.spritesheet('wraith1-moving', 'assets/wraith1-moving.png', {
-            frameWidth: 520,
-            frameHeight: 420
+        this.load.spritesheet('wiz-move', 'assets/Run.png', {
+            frameWidth: 250,
+            frameHeight: 250
         });
-        //Fireball
-        this.load.spritesheet('fireball', 'assets/fireball_blue.png', {
-            frameWidth: 500,
-            frameHeight: 380
+        this.load.spritesheet('wiz-jump', 'assets/Jump.png', {
+            frameWidth: 250,
+            frameHeight: 250
         });
+        this.load.spritesheet('wiz-atk-1', 'assets/Attack1.png', {
+            frameWidth: 250,
+            frameHeight: 250
+        });
+        this.load.spritesheet('wiz-atk-2', 'assets/Attack2.png', {
+            frameWidth: 250,
+            frameHeight: 250
+        });
+        this.load.spritesheet('wiz-dmged', 'assets/damaged.png', {
+            frameWidth: 250,
+            frameHeight: 250
+        });
+        this.load.spritesheet('wiz-fall', 'assets/Fall.png', {
+            frameWidth: 250,
+            frameHeight: 250
+        });
+        this.load.spritesheet('wiz-death', 'assets/Death.png', {
+            frameWidth: 250,
+            frameHeight: 250
+        });
+        /*
+        *   End main char, begin First Boss sprite.
+        */
+
+        /*
+        *   End first boss sprite.
+        */
+        //Load in Layers.
+        this.load.image('base_tiles', 'assets/tile-sheet/tile-set.png')
+        this.load.tilemapTiledJSON('tilemap', 'assets/tile-sheet/the-map.json');
     }
     create(){
+    
+    //bg image
+    this.bg1 = this.add.image(0,0, 'bg1').setOrigin(0, 0);
+    this.bg1.displayWidth = this.sys.canvas.width;
+    this.bg1.displayHeight = this.sys.canvas.height;
+    this.themeSong = this.sound.add("theme-song", { loop: true });
 
-        this.bg1 = this.add.image(0,0, 'bg1').setOrigin(0, 0);
-        this.bg1.displayWidth = this.sys.canvas.width;
-        this.bg1.displayHeight = this.sys.canvas.height;
+    //Audio
+    this.themeSong = this.sound.add("theme-song", { loop: true });
+    if (!this.themeSong.isPaused || !this.themeSong.isPlaying)
+    {
+         this.themeSong.play();
+    }
+
+    //Initializing all the layers from Tiled.
+    this.map = this.make.tilemap({ key: "tilemap" });
+    const tileset = this.map.addTilesetImage('Dungeon Tile Set', 'base_tiles');
+
+    this.wallsLayer = this.map.createLayer('walls', tileset, 0, 0);
+    this.wallsLayer.setCollisionBetween(1, 1200);
+    this.doorsLayer = this.map.createLayer('doors', tileset, 0, 0);
+
+    this.spikes = this.physics.add.group({  //Add logic for spike sprite so it deals damage to player.
+        allowGravity: false,
+        immovable: true
+      });
+      this.map.getObjectLayer('spikes').objects.forEach((spike) => {
+        const spikeSprite = this.spikes.create(spike.x, spike.y - spike.height, 'spike').setOrigin(0);
+        spikeSprite.body.setSize(spike.width, spike.height - 20).setOffset(0, 10);
+    });
+    this.keyLayer = this.map.createLayer('key', tileset, 0, 0);
+
+    //Add main char & set up his hitbox.
+    this.wizard = this.physics.add.sprite(0, config.height / 2 + 445, 'wiz-idle');
+    this.wizard.setSize(60,75, true);
+
+    //Set up camera
+    this.bg1.setScrollFactor(0)
+    this.cameras.main.startFollow(this.wizard);
+    //this.cameras.main.setBounds(0, 0, this.bg1.displayWidth, this.bg1.displayHeight); <- set bounds to BG size? maybe in the future.
+
+
+    /*
+    *   All Main Character (wizard) animations
+    */
+    this.anims.create({
+        key: 'wiz_idle',
+        frames: this.anims.generateFrameNumbers('wiz-idle'),
+        frameRate: 15,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'wiz_move',
+        frames: this.anims.generateFrameNumbers('wiz-move'),
+        frameRate: 15,
+    });
+    this.anims.create({
+        key: 'wiz_attack_one',
+        frames: this.anims.generateFrameNumbers('wiz-atk-1'),
+        frameRate: 15,
+    });
+    this.anims.create({
+        key: 'wiz_attack_two',
+        frames: this.anims.generateFrameNumbers('wiz-atk-2'),
+        frameRate: 12,
+    });
+    this.anims.create({
+        key: 'wiz_jump',
+        frames: this.anims.generateFrameNumbers('wiz-jump'),
+        frameRate: 15,
+    });
+    this.anims.create({
+        key: 'wiz_fall',
+        frames: this.anims.generateFrameNumbers('wiz-fall'),
+        frameRate: 15
+    });
+    /*
+    *   End main char animations.
+    *   Begin first boss animations.
+    */
+
+    //Start wiz idle and give him some gravity.
+    this.wizard.play('wiz_idle');
+    this.wizard.setGravityY(300);
+
+    //  Binding Keys.
+    this.enter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    this.space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.z = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+    this.x = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    this.cursorKeys = this.input.keyboard.createCursorKeys();
+
+    // Add Health bar
+    this.healthBar = this.makeBar(config.width / 2 - 100, config.height - 75, 0xe74c3c);
+    this.health = 100;
+    this.setValue(this.healthBar, this.health);
+    this.healthBar.setScrollFactor(0);
+
+    }
     
-    
-        this.wraith1 = this.physics.add.sprite(config.width / 2, config.height / 2, 'sprite')
+    makeBar(x, y,color) { // Use this for our healthbar.
+        //draw the bar
+        let bar = this.add.graphics();
+
+        //color the bar
+        bar.fillStyle(color, 1);
+        //fill the bar with a rectangle
+        bar.fillRect(0, 0, 200, 30);
+
         
-        this.anims.create({
-            key: 'wraith1_attack',
-            frames: this.anims.generateFrameNumbers('wraith1-attack'),
-            frameRate: 15,
-        });
-        this.anims.create({
-            key: 'wraith1_moving',
-            frames: this.anims.generateFrameNumbers('wraith1-moving'),
-            frameRate: 15,
-        });
-        this.anims.create({
-            key: 'shoot_fireball',
-            frames: this.anims.generateFrameNumbers('fireball'),
-            frameRate: 30
-        });
-        this.wraith1.play('wraith1_idle');
+        //position the bar
+        bar.x = x;
+        bar.y = y;
 
-        this.space = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        //return the bar
+        return bar;
+    }
+    setValue(bar,percentage) {
+        //scale the bar
+        bar.scaleX = percentage/100;
+    }
 
-        this.cursorKeys = this.input.keyboard.createCursorKeys();
+    update() {
+        //make sprite able to walk on the platform
+        this.physics.add.collider(this.wizard, this.wallsLayer); 
+        // sprite takes damage when touching the spikes
+        this.physics.add.collider(this.wizard, this.spikes, function(){this.health -= 0.1; this.setValue(this.healthBar, this.health); }, null, this);
+
+        //Pause Audio
+        if (Phaser.Input.Keyboard.JustDown(this.enter)){
+            if (this.themeSong.isPaused)
+            {
+                //this.scene.pause();
+                this.themeSong.resume();
+            }
+            else
+            {
+                //this.scene.resume();
+                this.themeSong.pause();
+            }
+        }
+            // Check if sprite is dead, if so, let's give them the good ol game-over.
+        if (this.health <= 0){
+            this.themeSong.destroy();
+            this.scene.start('gameOver');
+            /* //gonna use this for taking damage from spikes / enemeies.
+            this.health -= 10;
+            this.setValue(this.healthBar, this.health);*/
+        }
+        //Show falling animation if sprite really is falling and apply fall damage.
+        if (this.wizard.body.velocity.y > 400) {
+            this.wizard.play('wiz_fall', true);
+            this.health -= 0.5;
+            this.setValue(this.healthBar, this.health);
+        }
+
+        
+       //Jump with space
+       if (this.wizard.body.velocity.y === 0) { // Remove ability to jump more than once.
+            if (Phaser.Input.Keyboard.JustDown(this.space)){
+                this.wizard.setVelocityY(-300);
+                if (this.wizard.body.velocity.y < 0){
+                    this.wizard.play('wiz_jump', true);
+                }
+            }
+       }
+        //Attacks
+        if (Phaser.Input.Keyboard.JustDown(this.z)){
+            if (this.wizard.body.velocity.x === 0){ // player can only attack standing still.
+                if (this.wizard.flipX){ //If the sprite is facing left. (adding hitbox)
+                    this.wizard.setSize(100,75, true);
+                    this.wizard.setOffset(30, this.wizard.body.offset.y);
+                }else{ //sprite is facing right. (adding hitbox)
+                this.wizard.setSize(100,75, true);
+                this.wizard.setOffset(120, this.wizard.body.offset.y);
+                }
+                this.wizard.play('wiz_attack_one', true).anims.chain('wiz_idle');
+    
+                this.wizard.setOffset(this.wizard.body.offset);
+                this.wizard.setSize(60,75, true);
+            }
+            
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.x)){
+            this.wizard.play('wiz_attack_two', true).anims.chain('wiz_idle');
+        }
+        //Left movement & Right movement
+        if (this.cursorKeys.left.isDown){ 
+            this.wizard.play('wiz_move', true).anims.chain('wiz_idle');
+            this.wizard.flipX = true;
+            this.wizard.setVelocityX(-160);
+            //add fall animation even while moving
+            if (this.wizard.body.velocity.y > 500) {
+                this.wizard.play('wiz_fall', true);
+                this.health -= 1;
+                this.setValue(this.healthBar, this.health);
+            }
+        }else if(this.cursorKeys.right.isDown){
+            this.wizard.flipX = false;
+            this.wizard.play('wiz_move', true).anims.chain('wiz_idle');
+            this.wizard.setVelocityX(160);
+            //add fall animation even while moving
+            if (this.wizard.body.velocity.y > 500) {
+                this.wizard.play('wiz_fall', true);
+                this.health -= 1;
+                this.setValue(this.healthBar, this.health);
+            }
+        } else{ // Let's stop the main char sprite if he isn't going anywhere. otherwise we'll get some unwanted movements
+            this.wizard.setVelocityX(0);
+        }
+
+
+    }
+}
+
+class Scene2 extends Phaser.Scene {
+    constructor(){
+        super("gameOver");
+    }
+
+    preload(){
+    }
+    create(){
+        this.gameOverText = this.add.text(config.width / 2 - 300, config.height / 2 - 64, "GAME OVER", { fontSize: '64px', fontFamily: '"Press Start 2P"'});
+        this.gameOverSubText = this.add.text(config.width / 2 - 500, config.height / 2 + 64, "Press Enter to try again.", { fontSize: '40px', fontFamily: '"Press Start 2P"' });
+        this.gameOverText.font = '"Press Start 2P"';
+        this.gameOverSubText.font = '"Press Start 2P"';
+        //Register Enter binding
+        this.enter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
     }
     update(){
-        //Attack when hitting space
-        if (Phaser.Input.Keyboard.JustDown(this.space)){
-            this.wraith1.play('wraith1_attack').anims.chain('wraith1_idle');
-            this.fireball = this.physics.add.sprite(this.wraith1.x, this.wraith1.y, 'fireball')
-            this.fireball.setVelocityX(500);
-            this.fireball.play('shoot_fireball');
-        }
-        if (this.cursorKeys.left.isDown){ //Left movement & Right movement
-            this.wraith1.setVelocityX(-160);
-        }else if(this.cursorKeys.right.isDown){
-            this.wraith1.play('wraith1_moving').anims.chain('wraith1_idle');
-            this.wraith1.setVelocityX(160);
-        } else{
-            this.wraith1.setVelocityX(0);
-        }
-
-        if (this.cursorKeys.down.isDown){ //Up & Down movement
-            this.wraith1.setVelocityY(160);
-        } else if (this.cursorKeys.up.isDown){
-            this.wraith1.setVelocityY(-160);
-        } else{
-            this.wraith1.setVelocityY(0);
+        //Restart after hitting Enter
+        if (Phaser.Input.Keyboard.JustDown(this.enter)){
+            this.scene.start("playGame"); //Start game
         }
     }
 }
@@ -126,11 +322,12 @@ class Scene2 extends Phaser.Scene {
 var config = {
     type: Phaser.AUTO,
     parent: 'phaser-example',
-    width: 800,
-    height: 600,
+    width: 1200,
+    height: 650,
     physics: {
         default: 'arcade',
         arcade: {
+            gravity: { y: 100 },
             debug: false
         }
     },
