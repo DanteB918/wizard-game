@@ -69,11 +69,22 @@ class Scene1 extends Phaser.Scene {
             frameHeight: 250
         });
         /*
-        *   End main char, begin First Boss sprite.
+        *   End main char, begin skeleton sprite
         */
-
+        this.load.spritesheet('skeleton-idle', 'assets/sprites/skeletons/Idle.png', {
+            frameWidth:  150,
+            frameHeight: 100
+        });
+        this.load.spritesheet('skeleton-damage', 'assets/sprites/skeletons/damaged.png', {
+            frameWidth:  150,
+            frameHeight: 100
+        });
+        this.load.spritesheet('skeleton-death', 'assets/sprites/skeletons/Death.png', {
+            frameWidth:  150,
+            frameHeight: 100
+        });
         /*
-        *   End first boss sprite.
+        *   End skeleton sprite
         */
         //Load in Layers.
         this.load.image('base_tiles', 'assets/tile-sheet/tile-set.png')
@@ -115,6 +126,9 @@ class Scene1 extends Phaser.Scene {
     //Add main char & set up his hitbox.
     this.wizard = this.physics.add.sprite(0, config.height / 2 + 445, 'wiz-idle');
     this.wizard.setSize(60,75, true);
+
+    this.skeleton = this.physics.add.sprite(0, config.height / 2 , 'skeleton-idle');
+    this.skeleton.setSize(60,100, true);
 
     //Set up camera
     this.bg1.setScrollFactor(0)
@@ -158,8 +172,31 @@ class Scene1 extends Phaser.Scene {
     });
     /*
     *   End main char animations.
-    *   Begin first boss animations.
+    *   Begin skeleton animations.
     */
+
+    this.anims.create({
+        key: 'skeleton_idle',
+        frames: this.anims.generateFrameNumbers('skeleton-idle'),
+        frameRate: 7,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'skeleton_dmg',
+        frames: this.anims.generateFrameNumbers('skeleton-damage'),
+        frameRate: 7,
+    });
+    this.anims.create({
+        key: 'skeleton_death',
+        frames: this.anims.generateFrameNumbers('skeleton-death'),
+        frameRate: 7,
+    });
+
+    this.skeleton.play('skeleton_idle');
+    this.skelBar = this.makeBar(this.skeleton.x, this.skeleton.y - this.skeleton.height, 0xe74c3c);
+    this.skelHealth = 50;
+    this.setValue(this.skelBar, this.skelHealth);
+
 
     //Start wiz idle and give him some gravity.
     this.wizard.play('wiz_idle');
@@ -177,6 +214,8 @@ class Scene1 extends Phaser.Scene {
     this.health = 100;
     this.setValue(this.healthBar, this.health);
     this.healthBar.setScrollFactor(0);
+
+    this.skelDeathAnimation = true;
 
     }
     
@@ -203,6 +242,18 @@ class Scene1 extends Phaser.Scene {
     }
 
     update() {
+        this.physics.add.collider(this.skeleton, this.wallsLayer);
+
+        this.physics.add.overlap(this.skeleton, this.wizard, (skeleton, wizard) => //Overlapping skeleton and wiz
+        {
+            if (wizard.anims.currentAnim.key != 'wiz_attack_one' && wizard.anims.currentAnim.key != 'wiz_attack_two' ){ //take damage
+                this.health -= 0.0001; this.setValue(this.healthBar, this.health);
+            }else{ //Deal damage
+                this.skelHealth -= 0.0001; this.setValue(this.skelBar, this.skelHealth);
+                skeleton.play('skeleton_dmg', true).anims.chain('skeleton_idle');
+            }
+        });
+
         //make sprite able to walk on the platform
         this.physics.add.collider(this.wizard, this.wallsLayer); 
         // sprite takes damage when touching the spikes
@@ -221,13 +272,24 @@ class Scene1 extends Phaser.Scene {
                 this.themeSong.pause();
             }
         }
-            // Check if sprite is dead, if so, let's give them the good ol game-over.
+        // Check if sprite is dead, if so, let's give them the good ol game-over.
         if (this.health <= 0){
             this.themeSong.destroy();
             this.scene.start('gameOver');
             /* //gonna use this for taking damage from spikes / enemeies.
             this.health -= 10;
             this.setValue(this.healthBar, this.health);*/
+        }
+        //Check if skeleton is dead, if so let's see that animation
+        if (this.skelHealth <= 0)
+        {
+            if (this.skelDeathAnimation === true){
+                this.skeleton.play('skeleton_death', true);
+            }
+            this.skeleton.on('animationcomplete', () =>{
+                this.skelDeathAnimation = false;
+                this.skeleton.destroy();
+            })
         }
         //Show falling animation if sprite really is falling and apply fall damage.
         if (this.wizard.body.velocity.y > 400) {
@@ -253,15 +315,16 @@ class Scene1 extends Phaser.Scene {
                     this.wizard.setSize(100,75, true);
                     this.wizard.setOffset(30, this.wizard.body.offset.y);
                 }else{ //sprite is facing right. (adding hitbox)
-                this.wizard.setSize(100,75, true);
-                this.wizard.setOffset(120, this.wizard.body.offset.y);
+                    this.wizard.setSize(100,75, true);
+                    this.wizard.setOffset(120, this.wizard.body.offset.y);
                 }
                 this.wizard.play('wiz_attack_one', true).anims.chain('wiz_idle');
-    
-                this.wizard.setOffset(this.wizard.body.offset);
-                this.wizard.setSize(60,75, true);
+                //remove the following two lines to see the attack hitbox.
+                setTimeout(() => {
+                    this.wizard.setOffset(this.wizard.body.offset);
+                    this.wizard.setSize(60,75, true);
+                }, "500");
             }
-            
         }
         if (Phaser.Input.Keyboard.JustDown(this.x)){
             this.wizard.play('wiz_attack_two', true).anims.chain('wiz_idle');
