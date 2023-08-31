@@ -196,8 +196,7 @@ class Scene1 extends Phaser.Scene {
     this.skelBar = this.makeBar(this.skeleton.x, this.skeleton.y - this.skeleton.height, 0xe74c3c);
     this.skelHealth = 50;
     this.setValue(this.skelBar, this.skelHealth);
-
-
+    
     //Start wiz idle and give him some gravity.
     this.wizard.play('wiz_idle');
     this.wizard.setGravityY(300);
@@ -246,13 +245,19 @@ class Scene1 extends Phaser.Scene {
 
         this.physics.add.overlap(this.skeleton, this.wizard, (skeleton, wizard) => //Overlapping skeleton and wiz
         {
-            if (wizard.anims.currentAnim.key != 'wiz_attack_one' && wizard.anims.currentAnim.key != 'wiz_attack_two' ){ //take damage
-                this.health -= 0.0001; this.setValue(this.healthBar, this.health);
-            }else{ //Deal damage
-                this.skelHealth -= 0.0001; this.setValue(this.skelBar, this.skelHealth);
-                skeleton.play('skeleton_dmg', true).anims.chain('skeleton_idle');
+            if (this.skelHealth > 0){
+                if (wizard.anims.currentAnim.key != 'wiz_attack_one' && wizard.anims.currentAnim.key != 'wiz_attack_two'){ //take damage
+                    this.health -= 0.0001; this.setValue(this.healthBar, this.health);
+                }else{ //Deal damage
+                    this.skelHealth -= 0.0001; this.setValue(this.skelBar, this.skelHealth);
+                    skeleton.play('skeleton_dmg', true).anims.chain('skeleton_idle');
+                }
             }
+
         });
+
+        //Make skel bar follow the skeleton
+        this.skelBar.setPosition(this.skeleton.x - this.skeleton.width / 2 + 25, this.skeleton.y - this.skeleton.height / 2).setVisible(true);
 
         //make sprite able to walk on the platform
         this.physics.add.collider(this.wizard, this.wallsLayer); 
@@ -289,6 +294,7 @@ class Scene1 extends Phaser.Scene {
             this.skeleton.on('animationcomplete', () =>{
                 this.skelDeathAnimation = false;
                 this.skeleton.destroy();
+                this.skelBar.destroy();
             })
         }
         //Show falling animation if sprite really is falling and apply fall damage.
@@ -353,8 +359,6 @@ class Scene1 extends Phaser.Scene {
         } else{ // Let's stop the main char sprite if he isn't going anywhere. otherwise we'll get some unwanted movements
             this.wizard.setVelocityX(0);
         }
-
-
     }
 }
 
@@ -391,7 +395,7 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 100 },
-            debug: false
+            debug: true
         }
     },
     scene: [Scene1, Scene2],
