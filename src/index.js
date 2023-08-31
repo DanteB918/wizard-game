@@ -158,7 +158,7 @@ class Scene1 extends Phaser.Scene {
     this.anims.create({
         key: 'wiz_attack_two',
         frames: this.anims.generateFrameNumbers('wiz-atk-2'),
-        frameRate: 12,
+        frameRate: 10,
     });
     this.anims.create({
         key: 'wiz_jump',
@@ -168,6 +168,11 @@ class Scene1 extends Phaser.Scene {
     this.anims.create({
         key: 'wiz_fall',
         frames: this.anims.generateFrameNumbers('wiz-fall'),
+        frameRate: 15
+    });
+    this.anims.create({
+        key: 'wiz_death',
+        frames: this.anims.generateFrameNumbers('wiz-death'),
         frameRate: 15
     });
     /*
@@ -215,6 +220,7 @@ class Scene1 extends Phaser.Scene {
     this.healthBar.setScrollFactor(0);
 
     this.skelDeathAnimation = true;
+    this.wizDeathAnimation = true;
 
     }
     
@@ -279,11 +285,18 @@ class Scene1 extends Phaser.Scene {
         }
         // Check if sprite is dead, if so, let's give them the good ol game-over.
         if (this.health <= 0){
+            this.healthBar.destroy();
             this.themeSong.destroy();
-            this.scene.start('gameOver');
-            /* //gonna use this for taking damage from spikes / enemeies.
-            this.health -= 10;
-            this.setValue(this.healthBar, this.health);*/
+            if (this.wizard.anims.currentAnim.key === 'wiz_fall') {
+                this.scene.start('gameOver');
+            }
+            if (this.wizDeathAnimation === true){
+                this.wizDeathAnimation = false;
+                this.wizard.play('wiz_death', true);
+            }
+            this.wizard.on('animationcomplete', () =>{
+                this.scene.start('gameOver');
+            });
         }
         //Check if skeleton is dead, if so let's see that animation
         if (this.skelHealth <= 0)
@@ -325,7 +338,6 @@ class Scene1 extends Phaser.Scene {
                     this.wizard.setOffset(120, this.wizard.body.offset.y);
                 }
                 this.wizard.play('wiz_attack_one', true).anims.chain('wiz_idle');
-                //remove the following two lines to see the attack hitbox.
                 setTimeout(() => {
                     this.wizard.setOffset(this.wizard.body.offset);
                     this.wizard.setSize(60,75, true);
@@ -333,7 +345,20 @@ class Scene1 extends Phaser.Scene {
             }
         }
         if (Phaser.Input.Keyboard.JustDown(this.x)){
-            this.wizard.play('wiz_attack_two', true).anims.chain('wiz_idle');
+            if (this.wizard.body.velocity.x === 0){ // player can only attack standing still.
+                if (this.wizard.flipX){ //If the sprite is facing left. (adding hitbox)
+                    this.wizard.setSize(100,75, true);
+                    this.wizard.setOffset(30, this.wizard.body.offset.y);
+                }else{ //sprite is facing right. (adding hitbox)
+                    this.wizard.setSize(100,75, true);
+                    this.wizard.setOffset(120, this.wizard.body.offset.y);
+                }
+                this.wizard.play('wiz_attack_two', true).anims.chain('wiz_idle');
+                setTimeout(() => {
+                    this.wizard.setOffset(this.wizard.body.offset);
+                    this.wizard.setSize(60,75, true);
+                }, "600");
+            }
         }
         //Left movement & Right movement
         if (this.cursorKeys.left.isDown){ 
@@ -395,7 +420,7 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 100 },
-            debug: true
+            debug: false
         }
     },
     scene: [Scene1, Scene2],
