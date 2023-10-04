@@ -1,4 +1,4 @@
-# Phaser 3 Game
+# Evil Wizard Game
 
 A Phaser 3 Game
 
@@ -15,3 +15,13 @@ Run next commands in your terminal:
 | `npm install` | Install dependencies and launch browser with examples.|
 | `npm start` | Launch browser to show the examples. <br> Press `Ctrl + c` to kill **http-server** process. |
 =======
+
+## Free Assets used here
+
+https://luizmelo.itch.io/evil-wizard-2
+
+https://edermunizz.itch.io/free-pixel-art-forest
+
+https://incolgames.itch.io/dungeon-platformer-tile-set-pixel-art
+
+https://astrobob.itch.io/animated-pixel-art-skeleton
