@@ -1,6 +1,8 @@
 # Evil Wizard Game
 
+<div style="width: 50%;">
 ![+UtQvu](https://github.com/DanteB918/wizard-game/assets/100642899/133b8c02-e6eb-48f0-8600-e4c147b079e0)
+</div>
 
 A Phaser 3 Game
 
