@@ -20,10 +20,12 @@ Run next commands in your terminal:
 
 ## Free Assets used here
 
-https://luizmelo.itch.io/evil-wizard-2
+Evil Wizard Sprite: https://luizmelo.itch.io/evil-wizard-2
 
-https://edermunizz.itch.io/free-pixel-art-forest
+BG Image: https://edermunizz.itch.io/free-pixel-art-forest
 
-https://incolgames.itch.io/dungeon-platformer-tile-set-pixel-art
+Platform Tiles: https://incolgames.itch.io/dungeon-platformer-tile-set-pixel-art
 
-https://astrobob.itch.io/animated-pixel-art-skeleton
+Enemies: https://astrobob.itch.io/animated-pixel-art-skeleton
+
+Music: https://surt-r.itch.io/devil-tower-bgm
