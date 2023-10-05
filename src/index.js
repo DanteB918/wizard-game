@@ -1,4 +1,5 @@
 import 'phaser';
+import { ConcatenationScope } from 'webpack';
 
 /*
 *   GAME CONTROLS:
@@ -29,7 +30,6 @@ class Scene1 extends Phaser.Scene {
         this.load.audio("theme-song", ["assets/audio/devil-tower-1.mp3"]);
         //Load in Images
         this.load.image('bg1', 'assets/backgrounds/game_background_1.png' );
-        this.load.image('spike', 'assets/tile-sheet/spikes.png');
 
         //Load in Sprites. 
 
@@ -111,17 +111,39 @@ class Scene1 extends Phaser.Scene {
 
     this.wallsLayer = this.map.createLayer('walls', tileset, 0, 0);
     this.wallsLayer.setCollisionBetween(1, 1200);
+    this.doorsLayer = this.map.createLayer('doors_tile', tileset, 0, 0);
+    this.spikesLayer = this.map.createLayer('spike_tile', tileset, 0, 0);
     this.doorsLayer = this.map.createLayer('doors', tileset, 0, 0);
 
     this.spikes = this.physics.add.group({  //Add logic for spike sprite so it deals damage to player.
         allowGravity: false,
         immovable: true
       });
-      this.map.getObjectLayer('spikes').objects.forEach((spike) => {
-        const spikeSprite = this.spikes.create(spike.x, spike.y - spike.height, 'spike').setOrigin(0);
+    this.map.getObjectLayer('spikes').objects.forEach((spike) => {
+        const spikeSprite = this.spikes.create(spike.x, spike.y - spike.height).setOrigin(0);
         spikeSprite.body.setSize(spike.width, spike.height - 20).setOffset(0, 10);
+        spikeSprite.visible = false;
     });
-    this.keyLayer = this.map.createLayer('key', tileset, 0, 0);
+
+    this.doors = this.physics.add.group({
+        allowGravity: false,
+        immovable: true
+      });
+    this.map.getObjectLayer('doors').objects.forEach((door) => {
+        const doorSprite = this.doors.create(door.x, door.y - door.height);
+        doorSprite.visible = false;
+    });
+
+    this.key = this.physics.add.group({
+        allowGravity: false,
+        immovable: true
+      });
+    this.map.getObjectLayer('key').objects.forEach((key) => {
+        const keySprite = this.key.create(key.x, key.y - key.height);
+        keySprite.visible = false;
+    });
+
+    this.keyLayer = this.map.createLayer('key_tile', tileset, 0, 0);
 
     //Add main char & set up his hitbox.
     this.wizard = this.physics.add.sprite(0, config.height / 2 + 445, 'wiz-idle');
@@ -268,7 +290,20 @@ class Scene1 extends Phaser.Scene {
         //make sprite able to walk on the platform
         this.physics.add.collider(this.wizard, this.wallsLayer); 
         // sprite takes damage when touching the spikes
-        this.physics.add.collider(this.wizard, this.spikes, function(){this.health -= 0.1; this.setValue(this.healthBar, this.health); }, null, this);
+        this.physics.add.collider(this.wizard, this.spikes, function(){
+            this.health -= 0.1;
+            this.setValue(this.healthBar, this.health);
+        }, null, this);
+
+        // player grabs key
+        // this.physics.add.collider(this.wizard, this.key, function(){
+        //     this.keyLayer.destroy();
+        //     // this.key.destroy();
+        // }, null, this);
+
+        // if (! this.keyLayer ) {
+        //     console.log('gone!');
+        // }
 
         //Pause Audio
         if (Phaser.Input.Keyboard.JustDown(this.enter)){
