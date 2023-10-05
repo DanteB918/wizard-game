@@ -280,7 +280,6 @@ class Scene1 extends Phaser.Scene {
                     skeleton.play('skeleton_dmg', true).anims.chain('skeleton_idle');
                 }
             }
-
         });
 
         //Make skel bar follow the skeleton
@@ -295,7 +294,7 @@ class Scene1 extends Phaser.Scene {
         }, null, this);
 
         // player grabs key
-        this.physics.add.collider(this.wizard, this.key, function(){
+        this.physics.add.overlap(this.wizard, this.key, function(){
             this.keyLayer.destroy();
             this.keySprite.destroy();
             this.player_keys = 1;
@@ -339,8 +338,10 @@ class Scene1 extends Phaser.Scene {
                 this.skelDeathAnimation = false;
                 this.skeleton.destroy();
                 this.skelBar.destroy();
+                this.skeleton_defeated = 1;
             })
         }
+
         //Show falling animation if sprite really is falling and apply fall damage.
         if (this.wizard.body.velocity.y > 400) {
             this.wizard.play('wiz_fall', true);
