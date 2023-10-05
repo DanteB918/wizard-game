@@ -1,5 +1,4 @@
 import 'phaser';
-import { ConcatenationScope } from 'webpack';
 
 /*
 *   GAME CONTROLS:
@@ -139,8 +138,8 @@ class Scene1 extends Phaser.Scene {
         immovable: true
       });
     this.map.getObjectLayer('key').objects.forEach((key) => {
-        const keySprite = this.key.create(key.x, key.y - key.height);
-        keySprite.visible = false;
+        this.keySprite = this.key.create(key.x, key.y - key.height);
+        this.keySprite.visible = false;
     });
 
     this.keyLayer = this.map.createLayer('key_tile', tileset, 0, 0);
@@ -296,14 +295,11 @@ class Scene1 extends Phaser.Scene {
         }, null, this);
 
         // player grabs key
-        // this.physics.add.collider(this.wizard, this.key, function(){
-        //     this.keyLayer.destroy();
-        //     // this.key.destroy();
-        // }, null, this);
-
-        // if (! this.keyLayer ) {
-        //     console.log('gone!');
-        // }
+        this.physics.add.collider(this.wizard, this.key, function(){
+            this.keyLayer.destroy();
+            this.keySprite.destroy();
+            this.player_keys = 1;
+        }, null, this);
 
         //Pause Audio
         if (Phaser.Input.Keyboard.JustDown(this.enter)){
